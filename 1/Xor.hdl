@@ -5,11 +5,16 @@
 /**
  * Exclusive-or gate:
  * if ((a and Not(b)) or (Not(a) and b)) out = 1, else out = 0
+ Not each input, then feed into And, then combine with Or. The output is true if either input is true, but not both.
  */
 CHIP Xor {
     IN a, b;
     OUT out;
 
     PARTS:
-    //// Replace this comment with your code.
+    Not(in=a, out=nota);
+    Not(in=b, out=notb);
+    And(a=a, b=notb, out=anotb);
+    And(a=nota, b=b, out=notab);
+    Or(a=anotb, b=notab, out=out);
 }
