@@ -41,5 +41,42 @@ CHIP ALU {
         ng;      // if (out < 0)  equals 1, else 0
 
     PARTS:
-    
+    // Prep x
+    // if sel (zx == 1) zero out x
+    Mux16(a=x, b=false, sel=zx, out=xz);
+    // if nx=1 negate x
+    Not16(in=xz, out=notxz);
+    Mux16(a=xz, b=notxz, sel=nx, out=xf);
+
+    // Prep y
+    // if sel (zy == 1) zero out y
+    Mux16(a=y, b=false, sel=zy, out=yz);
+    Not16(in=yz, out=notyz);
+    Mux16(a=yz, b=notyz, sel=ny, out=yf);
+
+    // Combine x and y
+    // Compute both possible combos, then pick one
+    And16(a=xf, b=yf, out=xandy);  // used if f=0 (bitwise AND)
+    Add16(a=xf, b=yf, out=xaddy); // used if f=1 (addition)
+    Mux16(a=xandy, b=xaddy, sel=f, out=preout);
+
+    // Negate output if no=1
+    Not16(in=preout, out=notpreout);
+    Mux16(a=preout, b=notpreout, sel=no, out=out, out[15]=ng, out[0..7]=outlow, out[8..15]=outhigh);
+
+    // Compute zr, is the out all zeros?
+    // OR every bit together, if any bit is 1, out is nonzero
+    Or8Way(in=outlow, out=zrlow);
+    Or8Way(in=outhigh, out=zrhigh);
+    Or(a=zrlow, b=zrhigh, out=notzr);
+
+    // Flip it, zr should be 1 only when NO bits were on
+    Not(in=notzr, out=zr);
+
+
+
+
+
+
+
 }
