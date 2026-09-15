@@ -13,5 +13,8 @@ CHIP Bit {
     OUT out;
 
     PARTS:
-    //// Replace this comment with your code.
+    // Pick new value (in) if load is 1, otherwise keep feeding back the current stored value (out1).
+    Mux(a=out1, b=in, sel=load, out=muxend);
+    // Latch the chosen value on the clock edge; out1 feeds back into the mux for the "hold" case.
+    DFF(in=muxend, out=out1, out=out);
 }

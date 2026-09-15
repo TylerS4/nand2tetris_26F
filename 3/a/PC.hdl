@@ -14,5 +14,21 @@ CHIP PC {
     OUT out[16];
     
     PARTS:
-    //// Replace this comment with your code.
+    // Pre-compute current value + 1, in case inc is asserted.
+    // Safe to read regout here since it's the Register's settled value from last cycle, not something being computed now.
+    Inc16(in=regout, out=incremented);
+
+    // Build up the next value one Mux at a time going from lowest to highest priority. Each stage either keeps the previous stage's answer or overrides it.
+    // if inc=1, use the incremented value; else hold.
+    Mux16(a=regout, b=incremented, sel=inc, out=afterInc);
+
+    // if load=1, override with the input value.
+    Mux16(a=afterInc, b=in, sel=load, out=afterLoad);
+
+    // if reset=1, override everything with 0.
+    Mux16(a=afterLoad, b=false, sel=reset, out=nextValue);
+
+    // Store whatever the priority chain decided. load=true always, since holding is already handled above when inc/load/reset are all 0.
+    // out is used twice: once as the real output, once fed back into Inc16 above for next cycle's increment.
+    Register(in=nextValue, load=true, out=out, out=regout);
 }
