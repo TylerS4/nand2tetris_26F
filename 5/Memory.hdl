@@ -20,10 +20,42 @@
  * memory map. The behavior in these addresses is described in the Screen
  * and Keyboard chip specifications given in the lectures and the book.
  */
+
+
+
+//This chip is essentially a package of three 16-bit chip-parts:
+//RAM16K (a RAM chip of 16K registers, serving as a general-purpose data
+//store), Screen (a built-in RAM chip of 8K registers, acting as the screen
+//memory map), and Keyboard (a built-in register chip, acting as the keyboard
+//memory map)
+
+
+
 CHIP Memory {
     IN in[16], load, address[15];
     OUT out[16];
 
     PARTS:
-	//// Replace this comment with your code.
+    // Route load bit based on top 2 address bits (address[13..14]):
+    // 00 or 01 RAM16K (addresses 0 to 16383)
+    // 10 Screen  (addresses 16384 to 24575)
+    // 11 Keyboard (address 24576)
+    DMux4Way(in=load, sel=address[13..14], a=loadRAM0, b=loadRAM1, c=loadScreen, d=loadKbd);
+    
+    // Combine 00 and 01 selections to route load signal to RAM16K
+    Or(a=loadRAM0, b=loadRAM1, out=loadRAM);
+
+    // 16K RAM accessed using lower 14 bits (address[0..13] -> 2^14 = 16384 registers)
+	RAM16K(in=in, load=loadRAM, address=address[0..13], out=outRAM);
+    // 8K Screen memory map accessed using lower 13 bits (address[0..12] -> 2^13 = 8192 registers)
+    Screen(in=in, load=loadScreen, address=address[0..12], out=outScreen);
+    
+    Keyboard(out=outKbd);
+
+    // Select chip output data based on address[13..14]:
+    // 00 or 01 RAM16K output (when address[14] == 0)
+    // 10 Screen output (when address[14..13] == 10)
+    // 11 Keyboard output (when address[14..13] == 11)
+    Mux4Way16(a=outRAM, b=outRAM, c=outScreen, d=outKbd, sel=address[13..14], out=out);
+
 }

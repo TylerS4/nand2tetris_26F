@@ -32,5 +32,60 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-	//// Replace this comment with your code.
+    // instruction[15] sets the type:
+    // 0 A-instruction (@value)
+    // 1 C-instruction (dest=comp;jump)
+    Not(in=instruction[15], out=isA);
+
+    // A register input: the instruction (A-instr) or the ALU output (C-instr)
+    Mux16(a=instruction, b=outALU, sel=instruction[15], out=inA);
+
+    // Load A on any A-instruction, or a C-instruction with d1 (bit 5) set
+    And(a=instruction[15], b=instruction[5], out=loadAfromC);
+    Or(a=isA, b=loadAfromC, out=loadA);
+
+    // A feeds the ALU mux, the PC (jump target), and the RAM address
+    ARegister(in=inA, load=loadA, out=outA, out[0..14]=addressM);
+
+    // D takes the ALU output, loads on a C-instruction with d2 (bit 4) set
+    And(a=instruction[15], b=instruction[4], out=loadD);
+    DRegister(in=outALU, load=loadD, out=outD);
+
+    // ALU y input, chosen by the a-bit (bit 12):
+    // 0 A
+    // 1 M
+    Mux16(a=outA, b=inM, sel=instruction[12], out=outAM);
+
+    // Computes D with A or M, using comp bits c1..c6 (bits 11..6)
+    // outALU is an internal copy, since outM can't be reused inside the chip
+    // zr = 1 if result is 0, ng = 1 if result is negative
+    ALU(x=outD, y=outAM, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outM, out=outALU, zr=zr, ng=ng);
+
+    // Write to M on a C-instruction with d3 (bit 3) set
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    // Positive = not zero and not negative
+    Or(a=zr, b=ng, out=zrOrNg);
+    Not(in=zrOrNg, out=pos);
+
+    // Match each jump bit to its condition:
+    // j1 (bit 2) jump if < 0
+    // j2 (bit 1) jump if = 0
+    // j3 (bit 0) jump if > 0
+    And(a=instruction[2], b=ng, out=jlt);
+    And(a=instruction[1], b=zr, out=jeq);
+    And(a=instruction[0], b=pos, out=jgt);
+
+    // Jump if any condition is met
+    Or(a=jlt, b=jeq, out=jle);
+    Or(a=jle, b=jgt, out=jumpCond);
+
+    // Only jump on C-instructions (an A-instruction's low bits are part of a number)
+    And(a=instruction[15], b=jumpCond, out=loadPC);
+
+    // PC:
+    // reset = 1 pc = 0
+    // loadPC = 1 pc = A (jump)
+    // otherwise pc = pc + 1
+    PC(in=outA, load=loadPC, inc=true, reset=reset, out[0..14]=pc);
 }

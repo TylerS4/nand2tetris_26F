@@ -18,5 +18,16 @@ CHIP Computer {
     IN reset;
 
     PARTS:
-    //// Replace this comment with your code.
+    // ROM holds the program. The PC from the CPU picks which
+    // instruction to fetch, and it's sent to the CPU to execute.
+    ROM32K(address=pc, out=instruction);
+
+    // CPU executes the instruction, reading M from memory (inM),
+    // and sends back what to write (outM), where (addressM), and whether to (writeM).
+    // pc is fed back to the ROM to fetch the next instruction.
+    CPU(inM=outMemory, instruction=instruction, reset=reset, outM=outM, writeM=writeM, addressM=addressM, pc=pc);
+
+    // Data memory (RAM, Screen, Keyboard). Writes outM to addressM when writeM = 1,
+    // and always outputs the value at addressM back to the CPU as inM.
+    Memory(in=outM, load=writeM, address=addressM, out=outMemory);
 }
