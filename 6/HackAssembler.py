@@ -185,7 +185,7 @@ def assemble(inPath):
     # Write Prog.hack next to Prog.asm, one 16-bit instruction per line
     outPath = inPath.rsplit(".", 1)[0] + ".hack"
     with open(outPath, "w") as f:
-        f.write("\n".join(outLines) + "\n")
+        f.write("\n".join(outLines))
     print("Wrote " + outPath)
 
 
